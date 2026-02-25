@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Disable button and show loading
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
+            submitBtn.textContent = 'Sign in...';
             submitBtn.style.opacity = '0.7';
             
             // Get and set IP address
